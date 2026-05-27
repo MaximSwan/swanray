@@ -33,6 +33,7 @@
       "preload.js",
       "src/**/*",
       "renderer/**/*",
+      "icon.png",
       "package.json",
       "!**/*.md",
       "!**/*.log",
@@ -51,6 +52,7 @@
         { "target": "nsis", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
       ],
+      "icon": "build/icon.png",
       "requestedExecutionLevel": "requireAdministrator",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },

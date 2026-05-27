@@ -23,7 +23,7 @@ const els = {
 };
 
 const state = {
-  bypassPrograms: [], // [{ name, fullPath? }]
+  proxyPrograms: [], // [{ name, fullPath? }] — программы, чей трафик идёт через VPN
   connected: false,
 };
 
@@ -50,7 +50,7 @@ function setControlsLocked(locked) {
 
 function renderExeList() {
   els.exeList.innerHTML = '';
-  state.bypassPrograms.forEach((item, idx) => {
+  state.proxyPrograms.forEach((item, idx) => {
     const li = document.createElement('li');
 
     const info = document.createElement('div');
@@ -71,7 +71,7 @@ function renderExeList() {
     removeBtn.textContent = 'Удалить';
     removeBtn.disabled = state.connected;
     removeBtn.onclick = () => {
-      state.bypassPrograms.splice(idx, 1);
+      state.proxyPrograms.splice(idx, 1);
       renderExeList();
       persist();
     };
@@ -82,12 +82,12 @@ function renderExeList() {
   });
 }
 
-function addBypass(item) {
+function addProxyProgram(item) {
   if (!item || !item.name) return;
   const name = item.name.trim().toLowerCase();
   if (!name) return;
-  if (state.bypassPrograms.some((x) => x.name.toLowerCase() === name)) return;
-  state.bypassPrograms.push({ name: item.name, fullPath: item.fullPath });
+  if (state.proxyPrograms.some((x) => x.name.toLowerCase() === name)) return;
+  state.proxyPrograms.push({ name: item.name, fullPath: item.fullPath });
   renderExeList();
   persist();
 }
@@ -95,7 +95,7 @@ function addBypass(item) {
 async function persist() {
   await window.api.setSettings({
     vlessUrl: els.vlessUrl.value,
-    bypassPrograms: state.bypassPrograms,
+    proxyPrograms: state.proxyPrograms,
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 }
@@ -144,7 +144,12 @@ async function connect() {
 
   const res = await window.api.connect({
     vlessUrl: url,
-    bypassPrograms: state.bypassPrograms.map((p) => p.name),
+    // Передаём объекты {name, fullPath} как есть — fullPath даёт более
+    // надёжный матч в sing-box (process_path), независимо от регистра имени.
+    proxyPrograms: state.proxyPrograms.map((p) => ({
+      name: p.name,
+      fullPath: p.fullPath || '',
+    })),
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 
@@ -178,8 +183,8 @@ async function init() {
   const settings = await window.api.getSettings();
   if (settings.vlessUrl) els.vlessUrl.value = settings.vlessUrl;
   if (settings.mixedPort) els.mixedPort.value = settings.mixedPort;
-  if (Array.isArray(settings.bypassPrograms)) {
-    state.bypassPrograms = settings.bypassPrograms;
+  if (Array.isArray(settings.proxyPrograms)) {
+    state.proxyPrograms = settings.proxyPrograms;
     renderExeList();
   }
   previewVless(els.vlessUrl.value);
@@ -231,11 +236,11 @@ async function init() {
 
   els.btnPickExe.addEventListener('click', async () => {
     const files = await window.api.pickExe();
-    files.forEach((f) => addBypass(f));
+    files.forEach((f) => addProxyProgram(f));
   });
 
   els.btnClearExe.addEventListener('click', () => {
-    state.bypassPrograms = [];
+    state.proxyPrograms = [];
     renderExeList();
     persist();
   });
@@ -244,7 +249,7 @@ async function init() {
     if (e.key === 'Enter') {
       const name = els.manualExe.value.trim();
       if (name) {
-        addBypass({ name, fullPath: '' });
+        addProxyProgram({ name, fullPath: '' });
         els.manualExe.value = '';
       }
     }

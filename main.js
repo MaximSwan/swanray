@@ -13,7 +13,7 @@ const store = new Store({
   name: 'swanray-settings',
   defaults: {
     vlessUrl: '',
-    bypassPrograms: [],
+    proxyPrograms: [],
     mixedPort: 2080,
   },
 });
@@ -41,6 +41,7 @@ function createWindow() {
     minHeight: 520,
     title: 'Swanray VPN',
     backgroundColor: '#0f1115',
+    icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -113,7 +114,7 @@ app.on('before-quit', async (event) => {
 ipcMain.handle('settings:get', () => {
   return {
     vlessUrl: store.get('vlessUrl'),
-    bypassPrograms: store.get('bypassPrograms'),
+    proxyPrograms: store.get('proxyPrograms'),
     mixedPort: store.get('mixedPort'),
   };
 });
@@ -139,16 +140,13 @@ ipcMain.handle('vpn:connect', async (_event, payload) => {
     const vless = parseVlessUrl(payload.vlessUrl);
     const config = buildSingBoxConfig({
       vless,
-      bypassPrograms: payload.bypassPrograms || [],
+      proxyPrograms: payload.proxyPrograms || [],
       mixedPort: payload.mixedPort || 2080,
     });
 
     store.set('vlessUrl', payload.vlessUrl);
     store.set('mixedPort', payload.mixedPort || 2080);
-    // bypassPrograms НЕ перезаписываем здесь: renderer уже хранит их через
-    // settings:set как объекты {name, fullPath}, а сюда они приходят как
-    // плоский массив строк (имена exe). Перезапись затирает fullPath и
-    // ломает отображение после перезапуска приложения.
+    // proxyPrograms сохраняет renderer через settings:set — здесь не дублируем.
 
     await manager.start(config);
     return { ok: true, remark: vless.remark, host: vless.host, port: vless.port };
@@ -168,7 +166,7 @@ ipcMain.handle('vpn:disconnect', async () => {
 
 ipcMain.handle('dialog:pick-exe', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Выберите исполняемые файлы (.exe), которые НЕ должны идти через VPN',
+    title: 'Выберите исполняемые файлы (.exe), которые ДОЛЖНЫ идти через VPN',
     properties: ['openFile', 'multiSelections'],
     filters: [
       { name: 'Исполняемые файлы', extensions: ['exe'] },
