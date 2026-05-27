@@ -61,6 +61,14 @@
             Совет: можно вручную добавить имя процесса (например <code>chrome.exe</code>) — нажмите Enter в поле ниже.
           </div>
           <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe" />
+
+          <label class="check">
+            <input type="checkbox" id="exclude-ru" />
+            <span>Российские домены (<code>.ru</code>, <code>.рф</code>) — мимо VPN</span>
+          </label>
+          <div class="hint">
+            Когда включено, даже у программ из списка трафик на <code>.ru</code> / <code>.рф</code> идёт напрямую. Удобно для браузера: иностранные сайты — через VPN, российские — без него (быстрее и не блокируют по гео).
+          </div>
         </section>
 
         <section class="card">

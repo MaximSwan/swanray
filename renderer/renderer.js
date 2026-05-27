@@ -14,6 +14,7 @@ const els = {
   btnClearExe: $('btn-clear-exe'),
   exeList: $('exe-list'),
   manualExe: $('manual-exe'),
+  excludeRu: $('exclude-ru'),
   log: $('log'),
   btnClearLog: $('btn-clear-log'),
   binWarning: $('bin-warning'),
@@ -45,6 +46,7 @@ function setControlsLocked(locked) {
   els.btnPickExe.disabled = locked;
   els.btnClearExe.disabled = locked;
   els.manualExe.disabled = locked;
+  els.excludeRu.disabled = locked;
   els.exeList.querySelectorAll('button.remove').forEach((b) => { b.disabled = locked; });
 }
 
@@ -96,6 +98,7 @@ async function persist() {
   await window.api.setSettings({
     vlessUrl: els.vlessUrl.value,
     proxyPrograms: state.proxyPrograms,
+    excludeRu: els.excludeRu.checked,
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 }
@@ -150,6 +153,7 @@ async function connect() {
       name: p.name,
       fullPath: p.fullPath || '',
     })),
+    excludeRu: els.excludeRu.checked,
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 
@@ -187,6 +191,7 @@ async function init() {
     state.proxyPrograms = settings.proxyPrograms;
     renderExeList();
   }
+  els.excludeRu.checked = !!settings.excludeRu;
   previewVless(els.vlessUrl.value);
 
   const binInfo = await window.api.getBinInfo();
@@ -261,6 +266,7 @@ async function init() {
   });
 
   els.mixedPort.addEventListener('change', persist);
+  els.excludeRu.addEventListener('change', persist);
 
   els.btnClearLog.addEventListener('click', () => {
     els.log.textContent = '';

@@ -14,6 +14,7 @@ const store = new Store({
   defaults: {
     vlessUrl: '',
     proxyPrograms: [],
+    excludeRu: false,
     mixedPort: 2080,
   },
 });
@@ -115,6 +116,7 @@ ipcMain.handle('settings:get', () => {
   return {
     vlessUrl: store.get('vlessUrl'),
     proxyPrograms: store.get('proxyPrograms'),
+    excludeRu: store.get('excludeRu'),
     mixedPort: store.get('mixedPort'),
   };
 });
@@ -141,6 +143,7 @@ ipcMain.handle('vpn:connect', async (_event, payload) => {
     const config = buildSingBoxConfig({
       vless,
       proxyPrograms: payload.proxyPrograms || [],
+      excludeRu: !!payload.excludeRu,
       mixedPort: payload.mixedPort || 2080,
     });
 

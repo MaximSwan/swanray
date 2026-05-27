@@ -90,6 +90,8 @@ function buildVlessOutbound(vless) {
  *   программы, трафик которых пойдёт ЧЕРЕЗ VPN. Можно передавать просто имена
  *   ("Telegram.exe") либо объекты {name, fullPath} — fullPath даёт более
  *   надёжный матч и нечувствителен к регистру и наличию одноимённых exe.
+ * @param {boolean} [options.excludeRu=false] - если true, .ru и .рф домены
+ *   идут напрямую (direct), даже если программа в списке proxyPrograms.
  * @param {number} [options.mixedPort=2080] - порт для локального HTTP/SOCKS прокси
  * @param {string} [options.logLevel='info']
  */
@@ -97,6 +99,7 @@ function buildSingBoxConfig(options) {
   const {
     vless,
     proxyPrograms = [],
+    excludeRu = false,
     mixedPort = 2080,
     logLevel = 'warn',
   } = options;
@@ -151,7 +154,18 @@ function buildSingBoxConfig(options) {
     },
   ];
 
-  // 4. Выбранные программы — через VPN. Всё остальное упадёт в final=direct.
+  // 4. Российские домены (.ru / .рф) — direct ДО proxy-правил, чтобы даже
+  //    программы из списка ходили на них напрямую. Требует sniff: true на TUN.
+  //    Опирается на TLS SNI / HTTP Host из захваченных пакетов; для соединений
+  //    по чистому IP без домена не сработает (но для браузеров — почти всегда).
+  if (excludeRu) {
+    routeRules.push({
+      domain_suffix: ['.ru', '.рф'],
+      outbound: 'direct',
+    });
+  }
+
+  // 5. Выбранные программы — через VPN. Всё остальное упадёт в final=direct.
   //    Делаем ДВА правила: по process_name (если пользователь добавил вручную
   //    без пути) и по process_path (если файл выбран через диалог) — последнее
   //    надёжнее, т.к. process_name на некоторых стэках/версиях sing-box может
@@ -174,6 +188,11 @@ function buildSingBoxConfig(options) {
   }
   if (vless.sni && vless.sni !== vless.host && !isIpHost) {
     dnsRules.push({ domain: [vless.sni], server: 'local-dns' });
+  }
+  // Российские домены резолвим напрямую — чтобы не светить DNS-запросы
+  // через VPN и получать "местный" IP CDN (Yandex/VK/Sber и пр.).
+  if (excludeRu) {
+    dnsRules.push({ domain_suffix: ['.ru', '.рф'], server: 'local-dns' });
   }
   // DNS-запросы программ, идущих через VPN, резолвим через proxy-dns,
   // чтобы DNS-лик не выдавал реального IP клиента DNS-серверу провайдера.

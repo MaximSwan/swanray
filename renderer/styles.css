@@ -240,12 +240,31 @@ h2 {
 }
 
 .exe-list:empty::before {
-  content: 'Список пуст — все программы будут идти через VPN.';
+  content: 'Список пуст — через VPN не пойдёт ни одна программа.';
   display: block;
   color: var(--text-dim);
   font-size: 12px;
   padding: 8px 0;
 }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+.check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+.check input[type="checkbox"]:disabled { cursor: not-allowed; }
+.check input[type="checkbox"]:disabled + span { opacity: 0.6; }
 
 .exe-list li {
   display: flex;
