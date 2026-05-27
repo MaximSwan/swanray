@@ -1,0 +1,71 @@
+{
+  "name": "swanray",
+  "version": "1.0.0",
+  "description": "VLESS VPN клиент с поддержкой split tunneling (исключение программ)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "build": "electron-builder --win",
+    "build:installer": "electron-builder --win nsis",
+    "build:portable": "electron-builder --win portable",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "build": {
+    "appId": "com.swanray.vpn",
+    "productName": "Swanray",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "package.json",
+      "!**/*.md",
+      "!**/*.log",
+      "!.git",
+      "!.vscode",
+      "!.cursor"
+    ],
+    "extraResources": [
+      {
+        "from": "bin/sing-box.exe",
+        "to": "bin/sing-box.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "requestedExecutionLevel": "requireAdministrator",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Swanray VPN"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.exe",
+      "requestExecutionLevel": "admin"
+    }
+  }
+}

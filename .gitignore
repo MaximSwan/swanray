@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+*.log
+
+# sing-box бинарник — каждый пользователь скачивает сам
+bin/sing-box.exe
+bin/*.exe
+!bin/README.txt
+
+# временные / системные
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

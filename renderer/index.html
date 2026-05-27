@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>Swanray VPN</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">S</div>
+          <div>
+            <h1>Swanray</h1>
+            <div class="subtitle">VLESS-клиент с исключениями программ</div>
+          </div>
+        </div>
+        <div class="status" id="status">
+          <span class="dot" id="status-dot"></span>
+          <span id="status-text">Отключено</span>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="card">
+          <label class="label" for="vless-url">VLESS ключ</label>
+          <textarea
+            id="vless-url"
+            class="textarea"
+            spellcheck="false"
+            placeholder="vless://uuid@host:443?type=tcp&security=reality&pbk=...&sid=...&sni=...&fp=chrome#remark"
+          ></textarea>
+          <div class="hint" id="parse-hint"></div>
+
+          <div class="row">
+            <div class="port-input">
+              <label class="label" for="mixed-port">Локальный прокси-порт (HTTP/SOCKS)</label>
+              <input id="mixed-port" class="input" type="number" min="1024" max="65535" value="2080" />
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" id="btn-connect">Подключиться</button>
+              <button class="btn btn-secondary" id="btn-disconnect" disabled>Отключиться</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row between">
+            <div>
+              <h2>Исключения (split tunneling)</h2>
+              <div class="subtitle">Трафик этих программ пойдёт мимо VPN, напрямую через системный интернет.</div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-secondary" id="btn-pick-exe">Добавить .exe</button>
+              <button class="btn btn-ghost" id="btn-clear-exe">Очистить</button>
+            </div>
+          </div>
+          <ul class="exe-list" id="exe-list"></ul>
+          <div class="hint">
+            Совет: можно вручную добавить имя процесса (например <code>chrome.exe</code>) — нажмите Enter в поле ниже.
+          </div>
+          <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe" />
+        </section>
+
+        <section class="card">
+          <div class="row between">
+            <h2>Логи sing-box</h2>
+            <button class="btn btn-ghost" id="btn-clear-log">Очистить</button>
+          </div>
+          <pre class="log" id="log"></pre>
+        </section>
+
+        <section class="card warn" id="bin-warning" hidden>
+          <h2>Нужен sing-box.exe</h2>
+          <p>
+            Скачайте последнюю Windows-сборку <strong>sing-box</strong> со страницы
+            <a href="#" id="link-singbox">github.com/SagerNet/sing-box/releases</a>
+            и поместите файл <code>sing-box.exe</code> в папку
+            <code id="bin-path"></code>.
+          </p>
+          <button class="btn btn-secondary" id="btn-open-bin">Открыть папку bin</button>
+        </section>
+      </main>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
