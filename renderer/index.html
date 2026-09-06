@@ -13,7 +13,7 @@
           <div class="logo">S</div>
           <div>
             <h1>Swanray</h1>
-            <div class="subtitle">VLESS-клиент: VPN только для выбранных программ</div>
+            <div class="subtitle" id="header-subtitle">VLESS-клиент: VPN только для выбранных программ</div>
           </div>
         </div>
         <div class="status" id="status">
@@ -46,28 +46,38 @@
         </section>
 
         <section class="card">
-          <div class="row between">
-            <div>
-              <h2>Программы через VPN (split tunneling)</h2>
-              <div class="subtitle">Через VPN пойдёт ТОЛЬКО трафик выбранных программ. Весь остальной трафик — напрямую. Если список пуст, через VPN не идёт ничего.</div>
-            </div>
-            <div class="actions">
-              <button class="btn btn-secondary" id="btn-pick-exe">Добавить .exe</button>
-              <button class="btn btn-ghost" id="btn-clear-exe">Очистить</button>
-            </div>
-          </div>
-          <ul class="exe-list" id="exe-list"></ul>
-          <div class="hint">
-            Совет: можно вручную добавить имя процесса (например <code>chrome.exe</code>) — нажмите Enter в поле ниже.
-          </div>
-          <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe" />
-
-          <label class="check">
-            <input type="checkbox" id="exclude-ru" />
-            <span>Российские домены (<code>.ru</code>, <code>.рф</code>) — мимо VPN</span>
+          <label class="check check-top">
+            <input type="checkbox" id="route-all" />
+            <span>Весь сетевой трафик через VPN</span>
           </label>
-          <div class="hint">
-            Когда включено, даже у программ из списка трафик на <code>.ru</code> / <code>.рф</code> идёт напрямую. Удобно для браузера: иностранные сайты — через VPN, российские — без него (быстрее и не блокируют по гео).
+          <div class="hint" id="route-all-hint">
+            Когда включено, весь трафик системы идёт через VPN. Список программ и исключения по доменам недоступны.
+          </div>
+
+          <div class="split-block" id="split-block">
+            <div class="row between">
+              <div>
+                <h2>Программы через VPN (split tunneling)</h2>
+                <div class="subtitle">Через VPN пойдёт ТОЛЬКО трафик выбранных программ. Весь остальной трафик — напрямую. Если список пуст, через VPN не идёт ничего.</div>
+              </div>
+              <div class="actions">
+                <button class="btn btn-secondary" id="btn-pick-exe">Добавить .exe</button>
+                <button class="btn btn-ghost" id="btn-clear-exe">Очистить</button>
+              </div>
+            </div>
+            <ul class="exe-list" id="exe-list"></ul>
+            <div class="hint">
+              Совет: можно вручную добавить имя процесса (например <code>chrome.exe</code>) — нажмите Enter в поле ниже.
+            </div>
+            <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe" />
+
+            <label class="check">
+              <input type="checkbox" id="exclude-ru" />
+              <span>Российские домены (<code>.ru</code>, <code>.рф</code>) — мимо VPN</span>
+            </label>
+            <div class="hint">
+              Когда включено, даже у программ из списка трафик на <code>.ru</code> / <code>.рф</code> идёт напрямую. Удобно для браузера: иностранные сайты — через VPN, российские — без него (быстрее и не блокируют по гео).
+            </div>
           </div>
         </section>
 

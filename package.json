@@ -33,7 +33,7 @@
       "preload.js",
       "src/**/*",
       "renderer/**/*",
-      "icon.png",
+      "icon.ico",
       "package.json",
       "!**/*.md",
       "!**/*.log",
@@ -52,7 +52,7 @@
         { "target": "nsis", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "requestedExecutionLevel": "requireAdministrator",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
@@ -63,7 +63,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Swanray VPN"
+      "shortcutName": "Swanray VPN",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.exe",

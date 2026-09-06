@@ -5,11 +5,14 @@ const $ = (id) => document.getElementById(id);
 const els = {
   status: $('status'),
   statusText: $('status-text'),
+  headerSubtitle: $('header-subtitle'),
   vlessUrl: $('vless-url'),
   parseHint: $('parse-hint'),
   mixedPort: $('mixed-port'),
   btnConnect: $('btn-connect'),
   btnDisconnect: $('btn-disconnect'),
+  routeAll: $('route-all'),
+  splitBlock: $('split-block'),
   btnPickExe: $('btn-pick-exe'),
   btnClearExe: $('btn-clear-exe'),
   exeList: $('exe-list'),
@@ -35,6 +38,27 @@ function setStatus(name, text) {
 }
 
 /**
+ * Блокирует split tunneling, когда включён «весь трафик» или VPN активен.
+ */
+function applyRouteAllUi() {
+  const routeAll = els.routeAll.checked;
+  const splitLocked = routeAll || state.connected;
+
+  els.splitBlock.classList.toggle('is-locked', routeAll);
+  els.btnPickExe.disabled = splitLocked;
+  els.btnClearExe.disabled = splitLocked;
+  els.manualExe.disabled = splitLocked;
+  els.excludeRu.disabled = splitLocked;
+  els.exeList.querySelectorAll('button.remove').forEach((b) => {
+    b.disabled = splitLocked;
+  });
+
+  els.headerSubtitle.textContent = routeAll
+    ? 'VLESS-клиент: весь сетевой трафик через VPN'
+    : 'VLESS-клиент: VPN только для выбранных программ';
+}
+
+/**
  * Блокирует все элементы конфигурации (поля и кнопки), пока VPN активен или
  * пока идёт подключение/отключение. На лету менять VLESS-ключ, порт или
  * список исключений нельзя — sing-box их не подхватит без перезапуска,
@@ -43,15 +67,13 @@ function setStatus(name, text) {
 function setControlsLocked(locked) {
   els.vlessUrl.disabled = locked;
   els.mixedPort.disabled = locked;
-  els.btnPickExe.disabled = locked;
-  els.btnClearExe.disabled = locked;
-  els.manualExe.disabled = locked;
-  els.excludeRu.disabled = locked;
-  els.exeList.querySelectorAll('button.remove').forEach((b) => { b.disabled = locked; });
+  els.routeAll.disabled = locked;
+  applyRouteAllUi();
 }
 
 function renderExeList() {
   els.exeList.innerHTML = '';
+  const removeDisabled = els.routeAll.checked || state.connected;
   state.proxyPrograms.forEach((item, idx) => {
     const li = document.createElement('li');
 
@@ -71,7 +93,7 @@ function renderExeList() {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove';
     removeBtn.textContent = 'Удалить';
-    removeBtn.disabled = state.connected;
+    removeBtn.disabled = removeDisabled;
     removeBtn.onclick = () => {
       state.proxyPrograms.splice(idx, 1);
       renderExeList();
@@ -86,6 +108,7 @@ function renderExeList() {
 
 function addProxyProgram(item) {
   if (!item || !item.name) return;
+  if (els.routeAll.checked || state.connected) return;
   const name = item.name.trim().toLowerCase();
   if (!name) return;
   if (state.proxyPrograms.some((x) => x.name.toLowerCase() === name)) return;
@@ -99,6 +122,7 @@ async function persist() {
     vlessUrl: els.vlessUrl.value,
     proxyPrograms: state.proxyPrograms,
     excludeRu: els.excludeRu.checked,
+    routeAll: els.routeAll.checked,
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 }
@@ -154,6 +178,7 @@ async function connect() {
       fullPath: p.fullPath || '',
     })),
     excludeRu: els.excludeRu.checked,
+    routeAll: els.routeAll.checked,
     mixedPort: parseInt(els.mixedPort.value, 10) || 2080,
   });
 
@@ -192,7 +217,9 @@ async function init() {
     renderExeList();
   }
   els.excludeRu.checked = !!settings.excludeRu;
+  els.routeAll.checked = !!settings.routeAll;
   previewVless(els.vlessUrl.value);
+  applyRouteAllUi();
 
   const binInfo = await window.api.getBinInfo();
   if (!binInfo.exists) {
@@ -240,11 +267,13 @@ async function init() {
   els.btnDisconnect.addEventListener('click', disconnect);
 
   els.btnPickExe.addEventListener('click', async () => {
+    if (els.routeAll.checked || state.connected) return;
     const files = await window.api.pickExe();
     files.forEach((f) => addProxyProgram(f));
   });
 
   els.btnClearExe.addEventListener('click', () => {
+    if (els.routeAll.checked || state.connected) return;
     state.proxyPrograms = [];
     renderExeList();
     persist();
@@ -267,6 +296,11 @@ async function init() {
 
   els.mixedPort.addEventListener('change', persist);
   els.excludeRu.addEventListener('change', persist);
+  els.routeAll.addEventListener('change', () => {
+    applyRouteAllUi();
+    renderExeList();
+    persist();
+  });
 
   els.btnClearLog.addEventListener('click', () => {
     els.log.textContent = '';

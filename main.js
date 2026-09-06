@@ -15,6 +15,7 @@ const store = new Store({
     vlessUrl: '',
     proxyPrograms: [],
     excludeRu: false,
+    routeAll: false,
     mixedPort: 2080,
   },
 });
@@ -42,7 +43,7 @@ function createWindow() {
     minHeight: 520,
     title: 'Swanray VPN',
     backgroundColor: '#0f1115',
-    icon: path.join(__dirname, 'icon.png'),
+    icon: path.join(__dirname, 'icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -117,6 +118,7 @@ ipcMain.handle('settings:get', () => {
     vlessUrl: store.get('vlessUrl'),
     proxyPrograms: store.get('proxyPrograms'),
     excludeRu: store.get('excludeRu'),
+    routeAll: store.get('routeAll'),
     mixedPort: store.get('mixedPort'),
   };
 });
@@ -144,11 +146,13 @@ ipcMain.handle('vpn:connect', async (_event, payload) => {
       vless,
       proxyPrograms: payload.proxyPrograms || [],
       excludeRu: !!payload.excludeRu,
+      routeAll: !!payload.routeAll,
       mixedPort: payload.mixedPort || 2080,
     });
 
     store.set('vlessUrl', payload.vlessUrl);
     store.set('mixedPort', payload.mixedPort || 2080);
+    store.set('routeAll', !!payload.routeAll);
     // proxyPrograms сохраняет renderer через settings:set — здесь не дублируем.
 
     await manager.start(config);

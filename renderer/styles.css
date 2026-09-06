@@ -256,6 +256,18 @@ h2 {
   user-select: none;
   font-size: 13px;
 }
+.check-top {
+  margin-top: 0;
+  font-weight: 500;
+}
+.split-block {
+  margin-top: 16px;
+  transition: opacity 0.15s;
+}
+.split-block.is-locked {
+  opacity: 0.45;
+  pointer-events: none;
+}
 .check input[type="checkbox"] {
   width: 16px;
   height: 16px;

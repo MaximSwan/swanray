@@ -81,8 +81,9 @@ function buildVlessOutbound(vless) {
 /**
  * Строит полный конфиг sing-box.
  *
- * Режим include-only (split tunneling наоборот): по умолчанию весь трафик
- * идёт напрямую, а через VPN направляются ТОЛЬКО указанные программы.
+ * По умолчанию — include-only split tunneling: через VPN идут ТОЛЬКО указанные
+ * программы, остальное — напрямую. Если routeAll=true — весь трафик через VPN
+ * (final: proxy), список программ игнорируется.
  *
  * @param {object} options
  * @param {object} options.vless - объект из parseVlessUrl
@@ -91,7 +92,8 @@ function buildVlessOutbound(vless) {
  *   ("Telegram.exe") либо объекты {name, fullPath} — fullPath даёт более
  *   надёжный матч и нечувствителен к регистру и наличию одноимённых exe.
  * @param {boolean} [options.excludeRu=false] - если true, .ru и .рф домены
- *   идут напрямую (direct), даже если программа в списке proxyPrograms.
+ *   идут напрямую (direct). В режиме routeAll игнорируется.
+ * @param {boolean} [options.routeAll=false] - весь сетевой трафик через VPN
  * @param {number} [options.mixedPort=2080] - порт для локального HTTP/SOCKS прокси
  * @param {string} [options.logLevel='info']
  */
@@ -100,6 +102,7 @@ function buildSingBoxConfig(options) {
     vless,
     proxyPrograms = [],
     excludeRu = false,
+    routeAll = false,
     mixedPort = 2080,
     logLevel = 'warn',
   } = options;
@@ -154,27 +157,23 @@ function buildSingBoxConfig(options) {
     },
   ];
 
-  // 4. Российские домены (.ru / .рф) — direct ДО proxy-правил, чтобы даже
-  //    программы из списка ходили на них напрямую. Требует sniff: true на TUN.
-  //    Опирается на TLS SNI / HTTP Host из захваченных пакетов; для соединений
-  //    по чистому IP без домена не сработает (но для браузеров — почти всегда).
-  if (excludeRu) {
+  // 4. Российские домены — только в режиме split tunneling.
+  //    В routeAll весь трафик (включая .ru) идёт через VPN.
+  if (excludeRu && !routeAll) {
     routeRules.push({
       domain_suffix: ['.ru', '.рф'],
       outbound: 'direct',
     });
   }
 
-  // 5. Выбранные программы — через VPN. Всё остальное упадёт в final=direct.
-  //    Делаем ДВА правила: по process_name (если пользователь добавил вручную
-  //    без пути) и по process_path (если файл выбран через диалог) — последнее
-  //    надёжнее, т.к. process_name на некоторых стэках/версиях sing-box может
-  //    не определяться для всех TCP-соединений (см. issue #2823 sing-box).
-  if (proxyProcessNames.length > 0) {
-    routeRules.push({ process_name: proxyProcessNames, outbound: 'proxy' });
-  }
-  if (proxyProcessPaths.length > 0) {
-    routeRules.push({ process_path: proxyProcessPaths, outbound: 'proxy' });
+  // 5. Выбранные программы — через VPN. В routeAll не нужны: final=proxy.
+  if (!routeAll) {
+    if (proxyProcessNames.length > 0) {
+      routeRules.push({ process_name: proxyProcessNames, outbound: 'proxy' });
+    }
+    if (proxyProcessPaths.length > 0) {
+      routeRules.push({ process_path: proxyProcessPaths, outbound: 'proxy' });
+    }
   }
 
   // Определяем, является ли vless.host доменом (а не IP). Если домен —
@@ -189,22 +188,19 @@ function buildSingBoxConfig(options) {
   if (vless.sni && vless.sni !== vless.host && !isIpHost) {
     dnsRules.push({ domain: [vless.sni], server: 'local-dns' });
   }
-  // Российские домены резолвим напрямую — чтобы не светить DNS-запросы
-  // через VPN и получать "местный" IP CDN (Yandex/VK/Sber и пр.).
-  if (excludeRu) {
+  // Российские домены — local-dns только в split tunneling.
+  if (excludeRu && !routeAll) {
     dnsRules.push({ domain_suffix: ['.ru', '.рф'], server: 'local-dns' });
   }
-  // DNS-запросы программ, идущих через VPN, резолвим через proxy-dns,
-  // чтобы DNS-лик не выдавал реального IP клиента DNS-серверу провайдера.
-  // NB: на Windows DNS-запросы часто инициирует системный svchost (DNS Client),
-  // а не само приложение — поэтому это правило срабатывает не всегда. Но если
-  // приложение делает запрос напрямую (Telegram/Discord так и делают для своих
-  // API-доменов), правило поможет.
-  if (proxyProcessNames.length > 0) {
-    dnsRules.push({ process_name: proxyProcessNames, server: 'proxy-dns' });
-  }
-  if (proxyProcessPaths.length > 0) {
-    dnsRules.push({ process_path: proxyProcessPaths, server: 'proxy-dns' });
+  // В режиме split tunneling — proxy-dns для выбранных программ.
+  // В routeAll DNS по умолчанию идёт через proxy-dns (см. final ниже).
+  if (!routeAll) {
+    if (proxyProcessNames.length > 0) {
+      dnsRules.push({ process_name: proxyProcessNames, server: 'proxy-dns' });
+    }
+    if (proxyProcessPaths.length > 0) {
+      dnsRules.push({ process_path: proxyProcessPaths, server: 'proxy-dns' });
+    }
   }
   dnsRules.push({ outbound: 'direct', server: 'local-dns' });
 
@@ -230,7 +226,8 @@ function buildSingBoxConfig(options) {
         { tag: 'local-dns', address: 'https://1.1.1.1/dns-query', detour: 'direct' },
       ],
       rules: dnsRules,
-      final: 'local-dns',
+      // В full-tunnel DNS тоже через VPN — иначе утечка через провайдера.
+      final: routeAll ? 'proxy-dns' : 'local-dns',
       // ipv4_only сокращает количество DNS-запросов вдвое (нет AAAA) и
       // снимает кучу "exchange failed for ... IN AAAA" в логах, поскольку
       // IPv6 поверх VLESS у нас всё равно нормально не работает.
@@ -268,7 +265,7 @@ function buildSingBoxConfig(options) {
       // Явно включаем поиск процесса по соединениям. Без этого флага
       // process_name / process_path могут не матчиться, и трафик уходит в final.
       find_process: true,
-      final: 'direct',
+      final: routeAll ? 'proxy' : 'direct',
     },
     experimental: {
       cache_file: { enabled: true },
