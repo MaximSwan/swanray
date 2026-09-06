@@ -8,6 +8,13 @@ const Store = require('electron-store');
 const { parseVlessUrl } = require('./src/vless-parser');
 const { buildSingBoxConfig } = require('./src/singbox-config');
 const { SingBoxManager } = require('./src/singbox-manager');
+const {
+  inferPresetId,
+  makeProgramItem,
+  seedDefaultPrograms,
+  listPresetStatus,
+  listRunningProcesses,
+} = require('./src/proxy-apps');
 
 const store = new Store({
   name: 'swanray-settings',
@@ -17,8 +24,19 @@ const store = new Store({
     excludeRu: false,
     routeAll: false,
     mixedPort: 2080,
+    splitPresetsSeeded: false,
   },
 });
+
+function getProxyPrograms() {
+  let programs = store.get('proxyPrograms') || [];
+  if (!store.get('splitPresetsSeeded')) {
+    programs = seedDefaultPrograms(programs);
+    store.set('proxyPrograms', programs);
+    store.set('splitPresetsSeeded', true);
+  }
+  return programs;
+}
 
 // В dev `app.getAppPath()` = корень проекта (есть папка bin/).
 // В собранном виде ресурсы лежат в `process.resourcesPath` (electron-builder
@@ -38,9 +56,9 @@ let mainWindow = null;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
-    height: 680,
+    height: 740,
     minWidth: 720,
-    minHeight: 520,
+    minHeight: 560,
     title: 'Swanray VPN',
     backgroundColor: '#0f1115',
     icon: path.join(__dirname, 'icon.ico'),
@@ -116,7 +134,7 @@ app.on('before-quit', async (event) => {
 ipcMain.handle('settings:get', () => {
   return {
     vlessUrl: store.get('vlessUrl'),
-    proxyPrograms: store.get('proxyPrograms'),
+    proxyPrograms: getProxyPrograms(),
     excludeRu: store.get('excludeRu'),
     routeAll: store.get('routeAll'),
     mixedPort: store.get('mixedPort'),
@@ -181,11 +199,21 @@ ipcMain.handle('dialog:pick-exe', async () => {
     ],
   });
   if (result.canceled) return [];
-  return result.filePaths.map((p) => ({
-    fullPath: p,
-    name: path.basename(p),
-  }));
+  return result.filePaths.map((p) => {
+    const name = path.basename(p);
+    return {
+      fullPath: p,
+      name,
+      preset: inferPresetId({ name, fullPath: p }) || undefined,
+    };
+  });
 });
+
+ipcMain.handle('apps:presets', () => listPresetStatus());
+
+ipcMain.handle('apps:running', () => listRunningProcesses());
+
+ipcMain.handle('apps:preset-item', (_event, presetId) => makeProgramItem(presetId));
 
 ipcMain.handle('app:open-bin-folder', async () => {
   const binDir = path.dirname(BIN_PATH);

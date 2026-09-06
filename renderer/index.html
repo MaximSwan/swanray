@@ -62,14 +62,16 @@
               </div>
               <div class="actions">
                 <button class="btn btn-secondary" id="btn-pick-exe">Добавить .exe</button>
+                <button class="btn btn-secondary" id="btn-pick-running">Из запущенных</button>
                 <button class="btn btn-ghost" id="btn-clear-exe">Очистить</button>
               </div>
             </div>
+            <div class="presets" id="presets"></div>
             <ul class="exe-list" id="exe-list"></ul>
             <div class="hint">
-              Совет: можно вручную добавить имя процесса (например <code>chrome.exe</code>) — нажмите Enter в поле ниже.
+              Store-приложения (ChatGPT) лежат в защищённой папке WindowsApps — их не видно в «Добавить .exe». Нажмите <strong>ChatGPT</strong> или «Из запущенных». После подключения VPN перезапустите эти программы.
             </div>
-            <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe" />
+            <input id="manual-exe" class="input" type="text" placeholder="имя_программы.exe — Enter чтобы добавить" />
 
             <label class="check">
               <input type="checkbox" id="exclude-ru" />
@@ -88,6 +90,17 @@
           </div>
           <pre class="log" id="log"></pre>
         </section>
+
+        <div class="modal" id="proc-modal" hidden>
+          <div class="modal-card">
+            <div class="row between">
+              <h2>Запущенные программы</h2>
+              <button class="btn btn-ghost" id="proc-close" type="button">Закрыть</button>
+            </div>
+            <input id="proc-filter" class="input" type="text" placeholder="поиск по имени или пути" />
+            <ul class="exe-list proc-list" id="proc-list"></ul>
+          </div>
+        </div>
 
         <section class="card warn" id="bin-warning" hidden>
           <h2>Нужен sing-box.exe</h2>

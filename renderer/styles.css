@@ -247,6 +247,75 @@ h2 {
   padding: 8px 0;
 }
 
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 10px;
+  align-items: center;
+}
+
+.presets:empty { display: none; }
+
+.preset-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.preset-btn.is-on {
+  border-color: var(--accent);
+  background: rgba(124, 158, 255, 0.12);
+  color: var(--accent);
+}
+.preset-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.exe-list li .hint-line {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 24px;
+}
+.modal[hidden] { display: none; }
+
+.modal-card {
+  width: min(640px, 100%);
+  max-height: min(80vh, 640px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.proc-list {
+  max-height: min(52vh, 420px);
+  margin-top: 10px;
+}
+
+.proc-list li { cursor: pointer; }
+.proc-list li:hover { border-color: var(--accent); }
+
+.proc-list:empty::before {
+  content: 'Ничего не найдено. Запустите ChatGPT и обновите список.';
+}
+
 .check {
   display: flex;
   align-items: center;

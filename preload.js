@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('api', {
   disconnect: () => ipcRenderer.invoke('vpn:disconnect'),
 
   pickExe: () => ipcRenderer.invoke('dialog:pick-exe'),
+  getAppPresets: () => ipcRenderer.invoke('apps:presets'),
+  getRunningApps: () => ipcRenderer.invoke('apps:running'),
+  getPresetItem: (presetId) => ipcRenderer.invoke('apps:preset-item', presetId),
   openBinFolder: () => ipcRenderer.invoke('app:open-bin-folder'),
   getBinInfo: () => ipcRenderer.invoke('app:bin-info'),
 

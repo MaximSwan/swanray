@@ -14,9 +14,15 @@ const els = {
   routeAll: $('route-all'),
   splitBlock: $('split-block'),
   btnPickExe: $('btn-pick-exe'),
+  btnPickRunning: $('btn-pick-running'),
   btnClearExe: $('btn-clear-exe'),
+  presets: $('presets'),
   exeList: $('exe-list'),
   manualExe: $('manual-exe'),
+  procModal: $('proc-modal'),
+  procFilter: $('proc-filter'),
+  procList: $('proc-list'),
+  procClose: $('proc-close'),
   excludeRu: $('exclude-ru'),
   log: $('log'),
   btnClearLog: $('btn-clear-log'),
@@ -27,8 +33,10 @@ const els = {
 };
 
 const state = {
-  proxyPrograms: [], // [{ name, fullPath? }] — программы, чей трафик идёт через VPN
+  proxyPrograms: [], // [{ name, fullPath?, preset? }] — программы, чей трафик идёт через VPN
   connected: false,
+  appPresets: [],
+  runningApps: [],
 };
 
 function setStatus(name, text) {
@@ -46,10 +54,14 @@ function applyRouteAllUi() {
 
   els.splitBlock.classList.toggle('is-locked', routeAll);
   els.btnPickExe.disabled = splitLocked;
+  els.btnPickRunning.disabled = splitLocked;
   els.btnClearExe.disabled = splitLocked;
   els.manualExe.disabled = splitLocked;
   els.excludeRu.disabled = splitLocked;
   els.exeList.querySelectorAll('button.remove').forEach((b) => {
+    b.disabled = splitLocked;
+  });
+  els.presets.querySelectorAll('button').forEach((b) => {
     b.disabled = splitLocked;
   });
 
@@ -83,10 +95,24 @@ function renderExeList() {
     nameEl.className = 'name';
     nameEl.textContent = item.name;
     info.appendChild(nameEl);
+    const presetMeta = state.appPresets.find((p) => p.id === item.preset);
+    if (presetMeta && presetMeta.hint) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'hint-line';
+      hintEl.textContent = presetMeta.hint;
+      info.appendChild(hintEl);
+    }
     if (item.fullPath) {
       const pathEl = document.createElement('div');
       pathEl.className = 'path';
-      pathEl.textContent = item.fullPath;
+      pathEl.textContent = /\\WindowsApps\\/i.test(item.fullPath)
+        ? 'Microsoft Store • ' + item.name
+        : item.fullPath;
+      info.appendChild(pathEl);
+    } else if (item.preset === 'chatgpt') {
+      const pathEl = document.createElement('div');
+      pathEl.className = 'path';
+      pathEl.textContent = 'Microsoft Store / OpenAI ChatGPT';
       info.appendChild(pathEl);
     }
 
@@ -97,6 +123,7 @@ function renderExeList() {
     removeBtn.onclick = () => {
       state.proxyPrograms.splice(idx, 1);
       renderExeList();
+      renderPresets();
       persist();
     };
 
@@ -106,15 +133,120 @@ function renderExeList() {
   });
 }
 
+function inferPresetFromItem(item) {
+  if (item && item.preset) return item.preset;
+  const n = String((item && item.name) || '').toLowerCase();
+  const p = String((item && item.fullPath) || '').toLowerCase();
+  if (n === 'code.exe' || p.includes('microsoft vs code')) return 'vscode';
+  if (n === 'chatgpt.exe' || n === 'codex.exe' || p.includes('openai.codex') || p.includes('openai.chatgpt')) {
+    return 'chatgpt';
+  }
+  if (n === 'cursor.exe' || /[\\/]cursor[\\/]cursor\.exe$/.test(p)) return 'cursor';
+  return undefined;
+}
+
 function addProxyProgram(item) {
   if (!item || !item.name) return;
   if (els.routeAll.checked || state.connected) return;
   const name = item.name.trim().toLowerCase();
   if (!name) return;
+  const preset = inferPresetFromItem(item);
   if (state.proxyPrograms.some((x) => x.name.toLowerCase() === name)) return;
-  state.proxyPrograms.push({ name: item.name, fullPath: item.fullPath });
+  if (preset && state.proxyPrograms.some((x) => x.preset === preset)) return;
+  state.proxyPrograms.push({
+    name: item.name,
+    fullPath: item.fullPath || '',
+    preset,
+  });
   renderExeList();
+  renderPresets();
   persist();
+}
+
+const PRESET_NAMES = { vscode: 'Code.exe', chatgpt: 'ChatGPT.exe', cursor: 'Cursor.exe' };
+
+function hasPreset(id) {
+  return state.proxyPrograms.some((x) => x.preset === id || x.name.toLowerCase() === (PRESET_NAMES[id] || '').toLowerCase());
+}
+
+function renderPresets() {
+  els.presets.innerHTML = '';
+  if (!state.appPresets.length) return;
+  const locked = els.routeAll.checked || state.connected;
+  state.appPresets.forEach((preset) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-btn' + (hasPreset(preset.id) ? ' is-on' : '');
+    btn.textContent = preset.found ? preset.title : `${preset.title} (имя процесса)`;
+    btn.title = preset.path || preset.hint || preset.name;
+    btn.disabled = locked;
+    btn.onclick = async () => {
+      if (hasPreset(preset.id)) {
+        state.proxyPrograms = state.proxyPrograms.filter((x) => {
+          if (x.preset === preset.id) return false;
+          if (x.name.toLowerCase() === preset.name.toLowerCase()) return false;
+          return true;
+        });
+        renderExeList();
+        renderPresets();
+        persist();
+        return;
+      }
+      const item = await window.api.getPresetItem(preset.id);
+      addProxyProgram(item || { name: preset.name, fullPath: preset.path || '', preset: preset.id });
+    };
+    els.presets.appendChild(btn);
+  });
+}
+
+function closeProcModal() {
+  els.procModal.hidden = true;
+  els.procFilter.value = '';
+}
+
+function renderRunningList() {
+  const q = els.procFilter.value.trim().toLowerCase();
+  els.procList.innerHTML = '';
+  const locked = els.routeAll.checked || state.connected;
+  state.runningApps
+    .filter((app) => {
+      if (!q) return true;
+      return app.name.toLowerCase().includes(q) || (app.fullPath || '').toLowerCase().includes(q);
+    })
+    .forEach((app) => {
+      const li = document.createElement('li');
+      const info = document.createElement('div');
+      info.className = 'info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'name';
+      nameEl.textContent = app.name;
+      info.appendChild(nameEl);
+      if (app.fullPath) {
+        const pathEl = document.createElement('div');
+        pathEl.className = 'path';
+        pathEl.textContent = app.fullPath;
+        info.appendChild(pathEl);
+      }
+      li.appendChild(info);
+      li.onclick = () => {
+        if (locked) return;
+        addProxyProgram(app);
+        closeProcModal();
+      };
+      els.procList.appendChild(li);
+    });
+}
+
+async function openProcModal() {
+  if (els.routeAll.checked || state.connected) return;
+  els.procModal.hidden = false;
+  els.procList.innerHTML = '';
+  const empty = document.createElement('li');
+  empty.innerHTML = '<div class="info"><div class="name">Загрузка…</div></div>';
+  els.procList.appendChild(empty);
+  state.runningApps = (await window.api.getRunningApps()) || [];
+  renderRunningList();
+  els.procFilter.focus();
 }
 
 async function persist() {
@@ -176,6 +308,7 @@ async function connect() {
     proxyPrograms: state.proxyPrograms.map((p) => ({
       name: p.name,
       fullPath: p.fullPath || '',
+      preset: p.preset || undefined,
     })),
     excludeRu: els.excludeRu.checked,
     routeAll: els.routeAll.checked,
@@ -213,13 +346,24 @@ async function init() {
   if (settings.vlessUrl) els.vlessUrl.value = settings.vlessUrl;
   if (settings.mixedPort) els.mixedPort.value = settings.mixedPort;
   if (Array.isArray(settings.proxyPrograms)) {
-    state.proxyPrograms = settings.proxyPrograms;
+    state.proxyPrograms = settings.proxyPrograms.map((p) => ({
+      ...p,
+      preset: inferPresetFromItem(p),
+    }));
     renderExeList();
   }
+  try {
+    state.appPresets = (await window.api.getAppPresets()) || [];
+  } catch (_) {
+    state.appPresets = [];
+  }
+  renderExeList();
+  renderPresets();
   els.excludeRu.checked = !!settings.excludeRu;
   els.routeAll.checked = !!settings.routeAll;
   previewVless(els.vlessUrl.value);
   applyRouteAllUi();
+  persist().catch(() => {});
 
   const binInfo = await window.api.getBinInfo();
   if (!binInfo.exists) {
@@ -272,10 +416,23 @@ async function init() {
     files.forEach((f) => addProxyProgram(f));
   });
 
+  els.btnPickRunning.addEventListener('click', () => {
+    openProcModal().catch((e) => appendLog('[error] ' + (e && e.message ? e.message : String(e))));
+  });
+  els.procClose.addEventListener('click', closeProcModal);
+  els.procModal.addEventListener('click', (e) => {
+    if (e.target === els.procModal) closeProcModal();
+  });
+  els.procFilter.addEventListener('input', renderRunningList);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.procModal.hidden) closeProcModal();
+  });
+
   els.btnClearExe.addEventListener('click', () => {
     if (els.routeAll.checked || state.connected) return;
     state.proxyPrograms = [];
     renderExeList();
+    renderPresets();
     persist();
   });
 
